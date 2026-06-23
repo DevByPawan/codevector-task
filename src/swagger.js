@@ -10,7 +10,10 @@ const options = {
         },
         servers: [
             {
-                url: "http://localhost:3000",
+                url:
+                    process.env.NODE_ENV === "production"
+                        ? "https://codevector-task-r3x5.onrender.com"
+                        : "http://localhost:3000",
             },
         ],
     },
