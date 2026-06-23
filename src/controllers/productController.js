@@ -34,7 +34,7 @@ const getProducts = async (req, res) => {
 
         const products = await prisma.product.findMany({
             where,
-            take: limit,
+            take: limit + 1,
             orderBy: [
                 {
                     updated_at: "desc",
@@ -45,19 +45,25 @@ const getProducts = async (req, res) => {
             ],
         });
 
+        let hasNextPage = false;
         let nextCursor = null;
 
-        if (products.length > 0) {
-            const lastProduct = products[products.length - 1];
+        if (products.length > limit) {
+            hasNextPage = true;
+
+            const lastVisibleProduct = products[limit - 1];
 
             nextCursor = {
-                cursorUpdatedAt: lastProduct.updated_at,
-                cursorId: lastProduct.id,
+                cursorUpdatedAt: lastVisibleProduct.updated_at,
+                cursorId: lastVisibleProduct.id,
             };
+
+            products.pop();
         }
 
         res.json({
             count: products.length,
+            hasNextPage,
             nextCursor,
             data: products,
         });
