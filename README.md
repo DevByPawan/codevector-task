@@ -1,6 +1,18 @@
 # CodeVector Backend Task
 
-Backend service for browsing 200,000+ products with fast cursor-based pagination, category filtering, and stable ordering.
+Backend API for browsing and filtering a large product catalog (200,000+ products) with efficient cursor-based pagination.
+
+## Live Demo
+
+### API Base URL
+
+https://codevector-task-r3x5.onrender.com/products
+
+### Swagger Documentation
+
+https://codevector-task-r3x5.onrender.com/api-docs
+
+---
 
 ## Tech Stack
 
@@ -8,61 +20,101 @@ Backend service for browsing 200,000+ products with fast cursor-based pagination
 - Express.js
 - PostgreSQL (Neon)
 - Prisma ORM
-- Faker.js (data generation)
+- Swagger (API Documentation)
+- Faker.js (Dataset Generation)
 
 ---
 
 ## Features
 
 ### Product Browsing
-- Browse 200,000 products
-- Newest products first
+
+- Browse 200,000+ products
+- Stable ordering
 - Category filtering
-- Fast cursor-based pagination
+- Cursor-based pagination
+- Optimized database queries
 
-### Stable Pagination
-Uses cursor pagination instead of offset pagination.
-
-Products are ordered by:
-
-```text
-updated_at DESC,
-id DESC
-```
-
-This ensures consistent ordering and prevents duplicate or missing records while browsing large datasets.
-
-### Category Filter
+### Category Filtering
 
 Example:
 
-```bash
-/products?category=Books
+```http
+GET /products?category=Books
 ```
 
-### Pagination
+### Custom Page Size
 
-First page:
+Example:
 
-```bash
-/products
+```http
+GET /products?limit=10
 ```
 
-Custom limit:
+### Cursor-Based Pagination
 
-```bash
-/products?limit=10
+Products are sorted using:
+
+```sql
+ORDER BY updated_at DESC, id DESC
 ```
 
-Next page:
+This guarantees stable pagination and prevents duplicate or missing records when navigating large datasets.
 
-```bash
-/products?cursorUpdatedAt=2026-06-23T03:33:18.277Z&cursorId=abc123
+---
+
+## API Endpoint
+
+### Get Products
+
+```http
+GET /products
+```
+
+### Query Parameters
+
+| Parameter | Type | Required | Description |
+|------------|--------|----------|-------------|
+| category | string | No | Filter products by category |
+| limit | integer | No | Number of products per page (default: 20) |
+| cursorUpdatedAt | string | No | Cursor timestamp from previous response |
+| cursorId | string | No | Cursor id from previous response |
+
+---
+
+## Example Requests
+
+### First Page
+
+```http
+GET /products
+```
+
+### First Page With Custom Limit
+
+```http
+GET /products?limit=2
+```
+
+### Category Filter
+
+```http
+GET /products?category=Books
+```
+
+### Next Page
+
+Use the values returned in `nextCursor`.
+
+Example:
+
+```http
+GET /products?limit=2&cursorUpdatedAt=2026-06-23T03:33:18.277Z&cursorId=fff56964-0aa5-4ad8-9cd1-5d94a38c2305
 ```
 
 ---
 
-## API Response
+## Sample Response
 
 ```json
 {
@@ -70,9 +122,18 @@ Next page:
   "hasNextPage": true,
   "nextCursor": {
     "cursorUpdatedAt": "2026-06-23T03:33:18.277Z",
-    "cursorId": "abc123"
+    "cursorId": "fff1878bd-149f-447c-a83c-2e636497725c"
   },
-  "data": []
+  "data": [
+    {
+      "id": "fff...",
+      "name": "Sample Product",
+      "category": "Books",
+      "price": 199.99,
+      "created_at": "2026-06-23T03:33:18.277Z",
+      "updated_at": "2026-06-23T03:33:18.277Z"
+    }
+  ]
 }
 ```
 
@@ -80,18 +141,37 @@ Next page:
 
 ## Database Schema
 
-Product fields:
+### Product
 
-- id
-- name
-- category
-- price
-- created_at
-- updated_at
+| Field | Type |
+|---------|---------|
+| id | String (UUID) |
+| name | String |
+| category | String |
+| price | Float |
+| created_at | DateTime |
+| updated_at | DateTime |
 
 ---
 
-## Data Generation
+## Database Indexes
+
+To improve query performance:
+
+```prisma
+@@index([updated_at, id])
+@@index([category, updated_at, id])
+```
+
+These indexes support:
+
+- Fast cursor pagination
+- Fast category filtering
+- Stable sorting on large datasets
+
+---
+
+## Dataset Generation
 
 A seed script generates 200,000 products using Faker.js.
 
@@ -111,6 +191,12 @@ npm run seed
 
 ## Local Setup
 
+Clone repository:
+
+```bash
+git clone https://github.com/DevByPawan/codevector-task.git
+```
+
 Install dependencies:
 
 ```bash
@@ -123,46 +209,89 @@ Create `.env`
 DATABASE_URL=your_database_url
 ```
 
+Generate Prisma Client:
+
+```bash
+npx prisma generate
+```
+
 Run migrations:
 
 ```bash
 npx prisma migrate deploy
 ```
 
-Run server:
+Start server:
 
 ```bash
 npm run dev
+```
+
+Server runs on:
+
+```text
+http://localhost:3000
+```
+
+Swagger:
+
+```text
+http://localhost:3000/api-docs
 ```
 
 ---
 
 ## Deployment
 
-Backend deployed on Render.
+### Backend
 
-Database hosted on Neon PostgreSQL.
+Render
+
+### Database
+
+Neon PostgreSQL
+
+---
+
+## API Documentation
+
+Swagger UI is available at:
+
+https://codevector-task-r3x5.onrender.com/api-docs
 
 ---
 
 ## Why Cursor Pagination?
 
-Offset pagination becomes slower as datasets grow because the database must skip more and more rows.
+Offset pagination becomes increasingly expensive as datasets grow because the database must skip previously scanned rows.
 
-Cursor pagination:
+Cursor pagination provides:
 
-- Faster on large datasets
-- More scalable
-- Better for continuously changing data
-- Avoids duplicate records across pages
+- Better scalability
+- Faster queries
+- Consistent ordering
+- No duplicate records
+- No missing records during pagination
+
+This makes it suitable for large datasets such as the 200,000 product catalog used in this project.
 
 ---
 
 ## Future Improvements
 
-- Composite database indexes
-- Cursor encoding (Base64 cursor)
-- API documentation with Swagger
+- Base64 encoded cursors
 - Redis caching
 - Rate limiting
 - Automated tests
+- API versioning
+- Search functionality
+- Sorting options
+
+---
+
+## Author
+
+Pawan Agrahari
+
+GitHub:
+https://github.com/DevByPawan/codevector-task
